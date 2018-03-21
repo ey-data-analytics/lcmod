@@ -1,4 +1,7 @@
 import pandas as pd
+from matplotlib import pyplot as plt
+import matplotlib.ticker as ticker
+from matplotlib.backends.backend_pdf import PdfPages
 
 from lcmod.classes import *
 from lcmod.core import *
@@ -148,3 +151,111 @@ def make_rsets(df, params_dict,
 
 
 ##____________________________________________________________________________________________________________##
+
+
+def prod_info(drugs, df, details=False, pdf_save_path=None, save_path=None):
+    '''Returns summary info and plots for a list of drugs in a non-indexed dataframe (i.e. all columns).
+
+    Requirements for df - just needs to be able to find the following column headings:
+    ['molecule', 'date', 'setting', 'vol', 'spend']
+    '''
+
+    # First test if it's a list.  If it's a single product name string, then make it a list    
+    if not isinstance(drugs, list):
+        drugs = [drugs]
+
+    colors = dict(primary='seagreen', secondary='darkred')
+
+    if pdf_save_path is not None:
+        pdf = PdfPages(pdf_save_path)
+
+    fig, ax = plt.subplots(nrows=len(drugs), ncols=3, figsize=(15,4*len(drugs)))
+    fig.subplots_adjust(hspace=0.4, wspace=0.3)
+
+    for i, drug in enumerate(drugs):
+        print(drug)
+
+        # process the data
+        if details: print(df.loc[df['molecule']==drug].iloc[0])
+        drug_df = (df.loc[df['molecule']==drug, ['date', 'setting', 'vol', 'spend']]
+                   .set_index(['date', 'setting'], drop=True))
+        
+        loe_date = df.loc[df['molecule']==drug].iloc[0]['loe_date']
+
+        vols = drug_df.pivot_table(values='vol', columns='setting', index='date')
+        spend_gbp = 0.01*drug_df.pivot_table(values='spend', columns='setting', index='date')
+        price_gbp = spend_gbp / vols
+        ind = spend_gbp.index
+        
+        # make the plot
+
+        # SPEND
+        if len(drugs) == 1: it = (0)
+        else: it = (i,0)
+  
+        for s in spend_gbp.columns:
+            line = ax[it].plot(spend_gbp.index, spend_gbp[s]*12/1000000, alpha=0.7, color=colors[s])
+
+        if i%5==0: ax[it].set_title('spend, £m annualised')
+        ax[it].legend(spend_gbp.columns)
+        for t in ax[it].get_xticklabels():
+            t.set_rotation(45)
+        ax[it].set_ylim(0)
+        ax[it].set_ylabel(drug + ", loe  " + str(loe_date)[:7])
+
+        if loe_date > price_gbp.index[0] and loe_date < price_gbp.index[-1]:
+            ax[it].axvline(loe_date)
+
+        # PRICE
+        if len(drugs) == 1: it = (1)
+        else: it = (i,1)
+     
+        for j,s in enumerate(price_gbp.columns):
+            if j==1:
+                ax2 = ax[it].twinx()
+                ax2.plot(price_gbp.index, price_gbp[s], alpha=0.7, color=colors[s])
+                ax2.set_ylim(0)
+            else:
+                line = ax[it].plot(price_gbp.index, price_gbp[s], alpha=0.7, color=colors[s])
+
+        if i%5==0: ax[it].set_title('price, £')
+        # else: ax[it].set_title('loe= ', loe_date)
+        ax[it].legend(price_gbp.columns)
+        for t in ax[it].get_xticklabels():
+            t.set_rotation(45)    
+        ax[it].set_ylim(0)
+        ax[it].legend([])
+
+        if loe_date > price_gbp.index[0] and loe_date < price_gbp.index[-1]:
+            ax[it].axvline(loe_date)
+
+
+        # VOL
+        if len(drugs) == 1: it = (2)
+        else: it = (i,2)
+
+        for j,s in enumerate(vols.columns):
+            if j==1:
+                ax2 = ax[it].twinx()
+                ax2.plot(vols.index, vols[s], alpha=0.7, color=colors[s])
+                ax2.set_ylim(0)
+            else:
+                line = ax[it].plot(vols.index, vols[s], alpha=0.7, color=colors[s])
+
+        if i%5==0: ax[it].set_title('volume')
+        ax[it].legend(vols.columns)
+        for t in ax[it].get_xticklabels():
+            t.set_rotation(45)    
+        ax[it].set_ylim(0)
+        ax[it].legend([])
+
+        if loe_date > price_gbp.index[0] and loe_date < price_gbp.index[-1]:
+            ax[it].axvline(loe_date)
+
+
+    if pdf_save_path is not None:
+        pdf.savefig()
+        pdf.close()
+
+    if save_path is not None:
+        fig.savefig(save_path)
