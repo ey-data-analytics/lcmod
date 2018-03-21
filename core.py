@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import inspect
 
+from lcmod.classes import *
 
 def trend(prod, interval=24, *, launch_cat=None, life_cycle_per=0,
           shed=None, loe_delay=0, term_gr_pa=None,
@@ -534,19 +535,13 @@ def make_shape(spendline=None, shed=None, z_pad=0, peak_spend=1, annualised=Fals
 
 def get_forecast(shape, term_gr, coh_gr, n_pers=120, 
                   l_stop=None, name=None, _debug=False, _logfile=None):
-    '''Simpler version of get_forecast().  Not yet migrated to this though.
-    TODO enable launch phases, eg only periods 0 to 10, (or starting after 0), 
-    rather than limiting to continuous launching through whole projection period.
 
-    If start of launches is >0, have an option to scale according to a coh_gr rate.
+    '''For a given input shape, plus cohort parameters, generate an accumulation of
+    spend over a period of successive launches with that shape.
 
-    TODO make this the general function for projections - to accommodate either individual
-    lines (shapes - probably not the raw spendline [?]) or groups.
-
-    Actually maybe could do it to natively accept any previous stages, from shed to shapes.
-
-    NB no net spend or sav here.  Just takes what comes from shape.
-
+    Option to limit the duration of launches by passing l_stop. This specifies
+    the number of periods over which new launches occur - while still accumulating them 
+    over subsequent periods (until the end of the projection, at n_pers)
     '''
 
     # make starting array - the shape, extended for the number of periods
@@ -584,10 +579,10 @@ def get_forecast(shape, term_gr, coh_gr, n_pers=120,
             print("can't get a last period value")
 
     term_per = (1 + term_gr) ** np.arange(1,n_pers - len(shape) +1) * last_val
-    if _debug: print('Input shape\n', shape[:24])
+    if _debug: print('\nInput shape head\n', shape[:10])
     if _debug: print('Term_per ', term_per)
     base_arr = np.concatenate([shape, term_per])[:n_pers]
-    if _debug: print('Base_arr\n', base_arr[:24])
+    if _debug: print('Base_arr head\n', base_arr[:10])
 
 
     # instantiate an array to build on, adding layers (copy of base_arr)
@@ -621,7 +616,7 @@ def get_forecast(shape, term_gr, coh_gr, n_pers=120,
         df_out['dfsum'] = df_out.sum(axis=1)
         df_out['result'] = res
         df_out['diff'] = df_out['dfsum']  - df_out['result'] 
-        print('debug df info: ', df_out.info())
+        #print('debug df info: ', df_out.info())
         if _logfile is not None:
             df_out.to_pickle(_logfile + '.pkl')
     

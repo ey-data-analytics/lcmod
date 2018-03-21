@@ -5,7 +5,6 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 from lcmod.classes import *
 from lcmod.core import *
-from lcmod.misc import *
 
 
 def load_spend_dset(path='adjusted_consol_dset_15MAR18.pkl', add_start_m=True, trim_to_financial_year='2017-03', _debug=True):
