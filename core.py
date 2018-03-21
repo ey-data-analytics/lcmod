@@ -1,13 +1,11 @@
-
 import pandas as pd
 import numpy as np
 import inspect
 
 from lcmod.classes import *
 
-def trend(prod, interval=24, *, launch_cat=None, life_cycle_per=0,
-          shed=None, loe_delay=0, term_gr_pa=None,
-          term_gr = 0,  threshold_rate=0.001, n_pers=12, 
+def trend(prod, interval=24, launch_cat=None, life_cycle_per=0,
+          shed=None, loe_delay=0, term_gr = 0,  threshold_rate=0.001, n_pers=12, 
           _out_type='array', start_m=None, _debug=False, name=None):
 
     '''Takes input array, with parameters, and returns a trend-based projection.
@@ -27,7 +25,6 @@ def trend(prod, interval=24, *, launch_cat=None, life_cycle_per=0,
         _out_type       Pass 'df' to return a df with raw past, mov ave past and projection.  
                         (also pass a start_m to add a PeriodIndex to the df)
 
-    
 
     Notes on use of loe_delay
     -------------------------
@@ -60,7 +57,6 @@ def trend(prod, interval=24, *, launch_cat=None, life_cycle_per=0,
                 - allowing manual assignment to phase (eg as a var in the df)
                 - using gradual erosion (maybe)
 
-
         2. It extends the plateau duration projection (if there is one)
 
             This is more obvious, and less problematic.  Once the product is assigned to 
@@ -87,26 +83,22 @@ def trend(prod, interval=24, *, launch_cat=None, life_cycle_per=0,
     elif isinstance(prod, np.ndarray):
         prod = np.array(prod)
         if _debug: print('found an ndarray, len'.ljust(pad), str(len(prod)).rjust(rpad))
-        if len(prod) ==1:
+        if len(prod) == 1:
             if _debug: print('unpacking array of unit length (i.e. actual array nested in a list with len==1)')
             prod = prod[0]
             if _debug: print('array len now'.ljust(pad), str(len(prod)).rjust(rpad))
-
 
     else:
         print("DON'T KNOW WHAT HAS BEEN PASSED - make sure its not a dataframe")
         return
 
-
+    #---
     if _debug: print('\nPROCESSING LIFECYCLE INPUTS')
 
     uptake_dur = shed.uptake_dur
     # NB  this is the critical use of loe_delay
     plat_dur = shed.plat_dur + loe_delay
     gen_mult = shed.gen_mult
-
-    if term_gr_pa is not None:
-        term_gr = term_gr_pa/12
 
     if _debug: 
         print(" - uptake_dur".ljust(pad), str(uptake_dur).rjust(rpad))
@@ -119,7 +111,7 @@ def trend(prod, interval=24, *, launch_cat=None, life_cycle_per=0,
     prod[np.isnan(prod)]=0
     prod_ma = mov_ave(prod, 12)
 
-
+    #---
     if _debug: print('\nANALYSING PAST SPEND')
 
     max_spend        = np.nanmax(prod)
@@ -160,6 +152,7 @@ def trend(prod, interval=24, *, launch_cat=None, life_cycle_per=0,
         print("change per period over interval pct".ljust(pad), "{:0,.0f}%".format(interval_rate_pct*100).rjust(rpad))
 
 
+    #--- work out phase
     if _debug: print('\nCLASSIFYING TO PHASE')
 
     if life_cycle_per <= uptake_dur: 
@@ -174,6 +167,7 @@ def trend(prod, interval=24, *, launch_cat=None, life_cycle_per=0,
     if _debug: print('Classified as'.ljust(pad), phase.rjust(rpad))
 
 
+    #---  make array for building output
     if _debug: print('\nCONSTRUCTING PROJECTION ARRAY')
 
     out = np.array([last_spend_ma]) # this period overlaps with past, will be snipped later
@@ -233,6 +227,8 @@ def trend(prod, interval=24, *, launch_cat=None, life_cycle_per=0,
         out[out<0] = 0
 
 
+
+    #---output
     if _out_type == 'df':
         if _debug: print('\nGenerating df output')
         spacer = np.empty(len(prod))
@@ -252,6 +248,7 @@ def trend(prod, interval=24, *, launch_cat=None, life_cycle_per=0,
     else:
         if _debug: print("\nLEAVING:  ", inspect.stack()[0][3])
         return out[1:]
+
 
 
 ##_________________________________________________________________________##
@@ -351,7 +348,7 @@ def r_trend(df, n_pers, *, shed=None, uptake_dur=None, plat_dur=None, gen_mult=N
 ##_________________________________________________________________________##
 
 
-def r_fut_tr(df, n_pers, *, cut_off, shed=None, loe_delay=None,
+def r_fut_tr(df, n_pers, cut_off, shed=None, loe_delay=None,
              coh_gr=0, term_gr=0, name='future', _debug=False):
     
     '''Generates a projection of spend on future launches, based on cumulation
@@ -395,10 +392,10 @@ def r_fut_tr(df, n_pers, *, cut_off, shed=None, loe_delay=None,
     last_date = df.index[-1]
 
 
-    # 1. Make a shape from the passed shed
+    #--- 1. Make a shape from the passed shed
     shape = make_shape(shed=shed)
 
-    # 2. Use this to project a forecast.
+    #--- 2. Use this to project a forecast.
     # - need to project for n_pers plus the overlap with actual
     overlap = last_date - cut_off
     if _debug: 
@@ -410,7 +407,7 @@ def r_fut_tr(df, n_pers, *, cut_off, shed=None, loe_delay=None,
 
     fut = get_forecast(shape, term_gr=term_gr, coh_gr=coh_gr, n_pers=n_pers+overlap, name=name)
 
-    # 3. Scale the forecast
+    #--- 3. Scale the forecast
     #  Take cumulative sum for last period in slice passed
     last_sum = df[-1]
     if _debug: print('spend at last period'.ljust(pad), last_sum)
@@ -424,15 +421,16 @@ def r_fut_tr(df, n_pers, *, cut_off, shed=None, loe_delay=None,
     if _debug: print("\ntail of actual:\n", df.tail(), "\n")
     if _debug: print("\nscaled fut at overlap:\n", fut[overlap-5:overlap+5].head(), "\n")
 
-    # 4. Slice the forecast to give the future only
+    #--- 4. Slice the forecast to give the future only
     out = fut[overlap:]
 
     out.index=pd.PeriodIndex(start=last_date+1, periods=len(out), freq='M')
 
     return pd.DataFrame(out)
 
-##_________________________________________________________________________##
 
+
+##_________________________________________________________________________##
 
 
 def make_shape(spendline=None, shed=None, z_pad=0, peak_spend=1, annualised=False, sav_rate=0, 
@@ -449,18 +447,20 @@ def make_shape(spendline=None, shed=None, z_pad=0, peak_spend=1, annualised=Fals
 
     pad = 30
 
+    # set a multiplier if the shape is to be annualised
     ann_factor = 1
     if annualised:
         ann_factor = 144
         if_debug: print('annualising')
     elif _debug: print('not annualising')
 
-
+    # process the lifecycle inputs
     if spendline is not None and shed is not None:
         print('PASSED A SHED AND A SPENDLINE TO ', inspect.stack()[0][3])
         print('using the shed')
         spendline = None
 
+    # note the launch delay is translated into z_pad, the amount of zero padding the array gets
     if spendline is not None:
         if _debug: print('using a passed spendline.   Note will not synchronise for negative launch delays\n')
         shed = spendline.shed
@@ -479,11 +479,13 @@ def make_shape(spendline=None, shed=None, z_pad=0, peak_spend=1, annualised=Fals
 
     else: print('need a spendline or a shed'); return 1
 
+    # use the final values to build components of the shape
     zeros = np.zeros(z_pad)
     uptake = np.arange(1, shed.uptake_dur+1)
     plat = np.ones(shed.plat_dur) * shed.uptake_dur
     term = shed.gen_mult * (shed.uptake_dur * (1+term_gr) ** np.arange(1, term_pad+1))
 
+    # now put components together
     base = np.concatenate([zeros, uptake, plat, term])
 
     if _debug:
@@ -498,9 +500,7 @@ def make_shape(spendline=None, shed=None, z_pad=0, peak_spend=1, annualised=Fals
         print('\n-->base arr: '.ljust(pad))
         print(base, "\n")
 
-
-    base = np.concatenate([zeros, uptake, plat, term])
-
+    # on to processing of the shape - first, need to net off savings?
     if not net_spend: 
         sav_rate=0
         if _debug: print('not netting, so rate is'.ljust(pad), sav_rate)
@@ -531,7 +531,9 @@ def make_shape(spendline=None, shed=None, z_pad=0, peak_spend=1, annualised=Fals
     return base
 
 
+
 ##_________________________________________________________________________##
+
 
 def get_forecast(shape, term_gr, coh_gr, n_pers=120, 
                   l_stop=None, name=None, _debug=False, _logfile=None):
@@ -542,9 +544,15 @@ def get_forecast(shape, term_gr, coh_gr, n_pers=120,
     Option to limit the duration of launches by passing l_stop. This specifies
     the number of periods over which new launches occur - while still accumulating them 
     over subsequent periods (until the end of the projection, at n_pers)
-    '''
 
-    # make starting array - the shape, extended for the number of periods
+    Pass a file path to _logfile and get disaggregated output, with each launch cohort
+    shown separately (and then summed).
+    '''
+    # General strategy is to make a single array of the shape (plus terminal period)
+    # and then overlay copies, shifting forward one period each time (and applying any 
+    # cohort growth rate
+
+    # First make the starting array - the shape, extended for the number of periods
     # note this is snipped off at n_pers, which may mean never reach terminal
     if _debug: print("\nIN FUNCTION:  ".ljust(20), inspect.stack()[0][3])
     if _debug: print("..called by:  ".ljust(20), inspect.stack()[1][3], end="\n\n")
@@ -561,7 +569,7 @@ def get_forecast(shape, term_gr, coh_gr, n_pers=120,
 
         else: print('processing something but not sure what')
 
-    # get last spend value.  Sometimes index [-1] doesn't work with series
+    # get last spend value - used to scale the terminal period
     last_val = None
 
     try:
@@ -572,20 +580,27 @@ def get_forecast(shape, term_gr, coh_gr, n_pers=120,
         if _debug: print('could not get last period using index -1')
 
         if isinstance(shape, pd.Series):
-            last_val = shape.iat[-1]
+            last_val = shape.iloc[-1]
             if _debug: print('Last val assigned'.ljust(pad), last_val)
         
         else:
             print("can't get a last period value")
 
-    term_per = (1 + term_gr) ** np.arange(1,n_pers - len(shape) +1) * last_val
-    if _debug: print('\nInput shape head\n', shape[:10])
-    if _debug: print('Term_per ', term_per)
+    # make the terminal stretch that will extend the input shape
+    term_per = (1 + term_gr) ** np.arange(1, n_pers - len(shape) + 1) * last_val
+
+    if _debug: 
+        print('\nInput shape head\n', shape[:10])
+        print('Term_per ', term_per)
+
+    # assemble the array, adding the terminal extension
     base_arr = np.concatenate([shape, term_per])[:n_pers]
+
     if _debug: print('Base_arr head\n', base_arr[:10])
 
 
-    # instantiate an array to build on, adding layers (copy of base_arr)
+    # instantiate a new copy of the array to build on, adding layers 
+    # (don't want to mutate the starting array)
     res = base_arr.copy()
     
     # use a factor to reflect cohort growth
@@ -593,7 +608,8 @@ def get_forecast(shape, term_gr, coh_gr, n_pers=120,
     
     if _debug: 
         df_out = pd.DataFrame(base_arr, columns=[0])
-    
+
+    # determine whether the launches are going to stop within proj period 
     if l_stop is not None:
         l_pers = min(l_stop, n_pers)
         if _debug: print('curtailing launches at', l_pers)
@@ -601,8 +617,9 @@ def get_forecast(shape, term_gr, coh_gr, n_pers=120,
         l_pers = n_pers
         if _debug: print('launches for full interval')
 
-    # iterate through remaining periods (already have zero)
+    # MAIN JOB: iterate through remaining periods (already have zero)
     for per in range(1, l_pers):
+
         # first calculate the new growth factor
         growth_factor *= (1 + coh_gr)
         
@@ -610,6 +627,7 @@ def get_forecast(shape, term_gr, coh_gr, n_pers=120,
         layer = np.concatenate([np.zeros(per), base_arr[:-per]]) * growth_factor
         if _debug: df_out[per] = layer
 
+        # add the layer to the base
         res += layer
 
     if _debug: 
@@ -625,12 +643,12 @@ def get_forecast(shape, term_gr, coh_gr, n_pers=120,
 
 ###_________________________________________________________________________###
 
+
 def mov_ave(in_arr, window):
     '''Parameters:  
         
             in_arr: an input array (numpy, or anything that can be coerced by np.array())
             window: the window over which to make the moving average
-
 
         Return:
 
@@ -641,12 +659,13 @@ def mov_ave(in_arr, window):
     in_arr = np.array(in_arr)    
 
     # now turn nans to zero
-    in_arr[np.isnan(in_arr)]=0
+    in_arr[np.isnan(in_arr)] = 0
 
     a = np.cumsum(in_arr) # total cumulative sum
-    b=(np.cumsum(in_arr)[:-window]) # shifted forward, overlap truncated
-    c = np.insert(b,0,np.zeros(window))  # start filled to get to line up
-    return(a-c)/window
+    b = (np.cumsum(in_arr)[:-window]) # shifted forward, overlap truncated
+    c = np.insert(b, 0, np.zeros(window))  # start filled to get to line up
+
+    return (a-c) / window
 
     
  ###_________________________________________________________________________###
