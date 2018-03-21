@@ -1,9 +1,3 @@
-
-def test():
-    print('in classes.py')
-
-
-
 # -*- coding: utf-8 -*-
 
 import pandas as pd
@@ -12,12 +6,8 @@ import numpy as np
 from collections import namedtuple
 import inspect
 
-# from r_funcs import *
-# from projection_funcs import get_ix_slice, slicify, variablise
-
-from lcmod.classes import *
 from lcmod.core import *
-from lcmod.misc import *
+
 
 class RuleSet:
 
@@ -199,6 +189,39 @@ class RuleSet:
     
 ##_________________________________________________________________________##
 
+def get_ix_slice(df, in_dict):
+    '''make a pd.IndexSlice
+    args:   - a dataframe (with named index)
+            - dict of index names:value pairs to be sliced (in any order)
+            
+    returns a pd.IndexSlice with the desired spec
+            
+    eg, if index contains the boolean 'is_cool' and ints 'year'
+       'is_cool = True' will generate a slice where 'is_cool'  is set to True
+       'year = slice(2006, 2009, None)' will select years 2006 to 2009 
+       'year = slice(2006, None, None)' will select years 2006 onward 
+       'year = [2008, 2012]' will select just those two years
+       
+    simply print the returned output to see what's going on
+
+    Can pass output directly to iloc.  Eg
+
+        ixs = pf.get_ix_slice(df_main, dict(is_biol=False, launch_year=[2015,2016]))
+        df_main.loc[ixs,:]
+
+    '''
+    # first turn any None entries of the input into slices
+    for i in in_dict:
+        if in_dict[i] is '' or in_dict[i] is None:
+            in_dict[i] = slice(None, None, None)
+            
+
+    return tuple((in_dict.get(name, slice(None,None,None)))
+                     for name in df.index.names)
+
+
+##_________________________________________________________________________##
+
 class Shed(namedtuple('shed', 'shed_name uptake_dur plat_dur gen_mult')):
     '''The parameters to define a linear 'shed'-like lifecycle profile, 
     in a named tuple.
@@ -215,7 +238,8 @@ class Shed(namedtuple('shed', 'shed_name uptake_dur plat_dur gen_mult')):
 
 
 class SpendLine():
-    '''Stores information required to define a policy spendline.  I
+    '''Stores information required to define a line of spending, eg a set of products
+    in a particular scenario.
 
     CONSTRUCTOR ARGUMENTS
 

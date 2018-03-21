@@ -1,12 +1,8 @@
-def test1():
-    print('in core')
-
 
 import pandas as pd
 import numpy as np
 import inspect
 
-from lcmod.misc import * 
 
 def trend(prod, interval=24, *, launch_cat=None, life_cycle_per=0,
           shed=None, loe_delay=0, term_gr_pa=None,
@@ -633,3 +629,30 @@ def get_forecast(shape, term_gr, coh_gr, n_pers=120,
 
 
 ###_________________________________________________________________________###
+
+def mov_ave(in_arr, window):
+    '''Parameters:  
+        
+            in_arr: an input array (numpy, or anything that can be coerced by np.array())
+            window: the window over which to make the moving average
+
+
+        Return:
+
+            array of same length as in_arr, with mov ave
+    '''
+    
+    # first coerce to numpy array 
+    in_arr = np.array(in_arr)    
+
+    # now turn nans to zero
+    in_arr[np.isnan(in_arr)]=0
+
+    a = np.cumsum(in_arr) # total cumulative sum
+    b=(np.cumsum(in_arr)[:-window]) # shifted forward, overlap truncated
+    c = np.insert(b,0,np.zeros(window))  # start filled to get to line up
+    return(a-c)/window
+
+    
+ ###_________________________________________________________________________###
+
