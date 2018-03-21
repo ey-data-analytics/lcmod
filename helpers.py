@@ -8,7 +8,7 @@ from lcmod.core import *
 from lcmod.misc import *
 
 
-def load_spend_dset(path='adjusted_consol_dset_15MAR18.pkl', dd_start_m=True, trim_to_financial_year='2017-03', _debug=True):
+def load_spend_dset(path='adjusted_consol_dset_15MAR18.pkl', add_start_m=True, trim_to_financial_year='2017-03', _debug=True):
     '''Helper function to load the spend dataset using latest inputs - which have been adjusted to match DH Finance (on latest iteration)
 
     Option to trim to the last month of Finance projections - which is the last point at which we have a proper multiplier
