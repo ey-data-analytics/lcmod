@@ -222,7 +222,7 @@ def get_ix_slice(df, in_dict):
 
 ##_________________________________________________________________________##
 
-class Shed(namedtuple('shed', 'shed_name uptake_dur plat_dur gen_mult')):
+class Shed():
     '''The parameters to define a linear 'shed'-like lifecycle profile, 
     in a named tuple.
     
@@ -231,8 +231,28 @@ class Shed(namedtuple('shed', 'shed_name uptake_dur plat_dur gen_mult')):
     .plat_dur   : the number of periods of constant spend following uptake
     .gen_mult   : the change on patent expiry (multiplier)
     '''
-    pass
+    def __init__(self, name="", uptake_dur=None, plat_dur=None, gen_mult=None):
 
+        self.uptake_dur = uptake_dur
+        self.plat_dur = plat_dur
+        self.gen_mult = gen_mult
+        self.shed_name = name
+
+
+    def __repr__(self):
+        outlist = []
+        self._info = {"name": self.shed_name,
+             "uptake_dur": self.uptake_dur,
+             "plat_dur": self.plat_dur,
+             "gen_mult": self.gen_mult}
+        for key in self._info:
+            temp_string = key.ljust(27) + str(self._info[key]).rjust(10)
+            outlist.append(temp_string)
+        return "\n".join(outlist)
+
+
+
+    namedtuple('shed', 'shed_name uptake_dur plat_dur gen_mult')
 
 ##_________________________________________________________________________##
 
@@ -291,11 +311,18 @@ class SpendLine():
     def __str__(self):
         pad1 = 35
         pad2 = 10
+
+        if self.icer is None:
+            icer_str = str(None)
+
+        else:
+            icer_str = "{:0,.0f}".format(self.icer)
+
         return "\n".join([
             "SpendLine name:".ljust(pad1) + str(self.name).rjust(pad2),
             "peak spend pm of monthly cohort:".ljust(pad1) + "{:0,.2f}".format(self.peak_spend).rjust(pad2),
             "peak spend pa of annual cohort:".ljust(pad1) + "{:0,.2f}".format(self.peak_spend*12*12).rjust(pad2),
-            "ICER, £/QALY:".ljust(pad1) + "{:0,.0f}".format(self.icer).rjust(pad2),
+            "ICER, £/QALY:".ljust(pad1) + icer_str.rjust(pad2),
             "savings rate:".ljust(pad1) + "{:0,.1f}%".format(self.sav_rate*100).rjust(pad2),
             "shed:".ljust(pad1),
             "  - shed name:".ljust(pad1) + self.shed.shed_name.rjust(pad2),
@@ -306,7 +333,8 @@ class SpendLine():
             "term_gr:".ljust(pad1) + str(self.term_gr).rjust(pad2),
             "launch_delay:".ljust(pad1) + str(self.launch_delay).rjust(pad2),
             "launch_stop:".ljust(pad1) + str(self.launch_stop).rjust(pad2),
-            "coh_gr:".ljust(pad1) + str(self.coh_gr).rjust(pad2),
+            "cohort gr, pm:".ljust(pad1) + "{:0,.2f}%".format(self.coh_gr*100).rjust(pad2),
+            "cohort gr, pa:".ljust(pad1) +  "{:0,.1f}%".format(self.coh_gr*100*12).rjust(pad2),
             "log keys:".ljust(pad1) + ", ".join(self.log.keys()).rjust(pad2),
             "\n\n"
 
@@ -317,5 +345,5 @@ class SpendLine():
         return self.__str__()
 
     def get_shape(self):
-        return make_profile_shape(self.peak_spend, self.shed)
+        return make_shape(peak_spend=self.peak_spend, shed=self.shed)
 
