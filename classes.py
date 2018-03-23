@@ -251,9 +251,6 @@ class Shed():
         return "\n".join(outlist)
 
 
-
-    namedtuple('shed', 'shed_name uptake_dur plat_dur gen_mult')
-
 ##_________________________________________________________________________##
 
 
