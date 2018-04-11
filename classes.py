@@ -231,10 +231,15 @@ class Shed():
     .plat_dur   : the number of periods of constant spend following uptake
     .gen_mult   : the change on patent expiry (multiplier)
     '''
-    def __init__(self, name="", uptake_dur=None, plat_dur=None, gen_mult=None):
+    def __init__(self, name="", uptake_dur=None, plat_dur=None, gen_mult=None, plat_gr=None):
 
         self.uptake_dur = uptake_dur
         self.plat_dur = plat_dur
+
+        if plat_gr is None:
+            self.plat_gr = 0
+        else: self.plat_gr = plat_gr
+
         self.gen_mult = gen_mult
         self.shed_name = name
 
@@ -244,7 +249,8 @@ class Shed():
         self._info = {"name": self.shed_name,
              "uptake_dur": self.uptake_dur,
              "plat_dur": self.plat_dur,
-             "gen_mult": self.gen_mult}
+             "gen_mult": self.gen_mult,
+             "plat_gr": self.plat_gr}
         for key in self._info:
             temp_string = key.ljust(27) + str(self._info[key]).rjust(10)
             outlist.append(temp_string)

@@ -99,10 +99,12 @@ def trend(prod, interval=24, launch_cat=None, life_cycle_per=0,
     # NB  this is the critical use of loe_delay
     plat_dur = shed.plat_dur + loe_delay
     gen_mult = shed.gen_mult
+    plat_gr = shed.plat_gr
 
     if _debug: 
         print(" - uptake_dur".ljust(pad), str(uptake_dur).rjust(rpad))
         print(" - plat_dur".ljust(pad), str(plat_dur).rjust(rpad))
+        print(" - plat_gr".ljust(pad), str(plat_gr).rjust(rpad))
         print("(after adding loe_delay of)".ljust(pad), str(loe_delay).rjust(rpad))
         print(" - gen_mult".ljust(pad), str(gen_mult).rjust(rpad))
         print("lifecycle period".ljust(pad), str(life_cycle_per).rjust(rpad))
@@ -203,11 +205,14 @@ def trend(prod, interval=24, launch_cat=None, life_cycle_per=0,
         # compute remaining PLATEAU periods, and generate an array 
         # Note that plat_dur has been extended by loe_delay
         plat_pers = min(max((uptake_dur + plat_dur) - life_cycle_per, 0), n_pers - (len(out)-1))
-        plat_out = out[-1] * np.ones(plat_pers)
+        plat_out = out[-1] * ((1 + plat_gr) ** np.arange(plat_pers))
         life_cycle_per += plat_pers
 
         if _debug:
             print("\nRemaining PLATEAU periods".ljust(pad), str(plat_pers).rjust(rpad))
+            plat_ch = 100*(plat_out[-1]-plat_out[0])/plat_out[0]
+            print("Total growth over plateau".ljust(pad), "{:0,.1f}%".format(plat_ch).rjust(rpad))
+
             print("--> lifecycle period moved to".ljust(pad), str(life_cycle_per).rjust(rpad))
 
         # append the plateau array to the out array
