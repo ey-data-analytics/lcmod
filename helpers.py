@@ -258,3 +258,139 @@ def prod_info(drugs, df, details=False, pdf_save_path=None, save_path=None):
 
     if save_path is not None:
         fig.savefig(save_path)
+
+
+
+
+##_________________________________________________________________________##
+
+def plot_hi_lo_base(in_dict, df=None, 
+                        trim=('1-2010', '12-2023'), figsize=(12,6), ybarlims=None,
+                        outfile=None, fig=None, ax=None, bars=True, return_fig=False, _debug=False):
+
+    '''Pass in a dictionary of scenarios with structure as follows:
+
+    in_dict = { 'hi': {'params': <parameters for constructing rsets and getting projections>,
+                       'sums':   <summed projections>,
+                       'color':  <color to plot this scenario>,
+                       'legend': <how this should be labelled in the legend>},
+
+                'baseline': {'params'.. etc},
+
+                'lo': {'params'.. etc}
+                }
+    
+    Keys of in_dict can be whatever - used as the names of the scenarios.  
+      (If one has 'base' it gets a thick line.)
+
+    Need either sums or (params plus a dataframe - which can calc sums).  
+    See Sensitivity Analysis notebook.
+
+    '''
+
+    pad = 30
+
+    # make a df of sums
+    sums_list = []
+
+    for s in in_dict:
+
+        this_sum = None
+
+        if _debug: print('in rset'.ljust(pad), s)
+
+        # check if missing sums, and get them if reqd.  Append to the df
+        if in_dict[s].get('sums', None) is None:
+
+            if _debug: print('no sum detected, so making one')
+
+            if df is None:
+                print('Need a df and params for ', s, ' so stopping here'); return
+
+            elif in_dict[s]['params'] is None:
+                print('Need params for ', s, ' so stopping here'); return
+
+            else: 
+                this_sum = make_rsets(df, in_dict[s]['params'], return_sum=True, trim=trim)
+                if _debug: print('got this\n', this_sum.head())
+
+        else: 
+            if _debug: print('found sums for this, so just going to trim it')
+            this_sum = in_dict[s]['sums'].loc[slice(pd.Period(trim[0], freq='M'), pd.Period(trim[1], freq='M'),None)]
+
+        this_sum.name = s
+
+        # at this point must have the sums
+        sums_list.append(this_sum)
+
+    # so we have a df of results    
+    res_df =  pd.concat(sums_list, axis=1)
+
+    num_plots = 1
+    if bars: num_plots = 2
+
+    # FIRST THE LINE GRAPH
+    if fig is None and ax is None:
+        fig, ax = plt.subplots(num_plots, figsize=(figsize[0], figsize[1]*num_plots))
+
+    ind = res_df.index.to_timestamp()
+
+    ax_it = ax
+    if bars: ax_it = ax[0]
+
+    for i, s in enumerate(res_df):
+        line = ax_it.plot(ind, res_df[s]*12/10**11, alpha=0.5)
+        if in_dict[s].get('color', None) is not None:
+            line[0].set_color(in_dict[s]['color'])
+        if 'base' in s.lower(): line[0].set_linewidth(3)
+
+    # do filling in
+    # first get hold of the baseline
+    base_out_name = [x for x in res_df.columns if 'base' in x.lower()]
+
+    if len(base_out_name)==1: 
+        base_out_name = base_out_name[0]
+        for s in res_df.drop(base_out_name, axis=1):
+            fill_color = in_dict[s].get('color', 'grey')
+            ax_it.fill_between(ind, res_df[s]*12/10**11, res_df[base_out_name]*12/10**11, color=fill_color, alpha=0.15)
+
+    leg = [in_dict[s].get('legend',s) for s in in_dict]
+    ax_it.legend(leg)
+
+    if bars: ax_it.set_xticks([])
+
+    #  NOW THE BAR CHART
+    if bars:
+        ann_df = res_df.groupby(res_df.index.year).sum()
+        diffs_df = ann_df.drop('baseline', axis=1).subtract(ann_df['baseline'], axis=0)/10**11
+
+        ax_it = ax[1]
+
+        bar_w = 1; gap = 0.4
+        
+        for i,s in enumerate(diffs_df.columns):
+            rect = ax_it.bar(diffs_df.index, diffs_df[s].values, width=bar_w-gap, color=in_dict[s]['color'], alpha=0.3)
+
+        if ybarlims is not None: ax_it.set_ylim(ybarlims)
+
+        ax_it.set_xticks([])
+        ax_it.set_xlim(diffs_df.index[0]-0.5, diffs_df.index[-1]+0.5)
+        # ax_it.legend([l for l in leg if 'base' not in l])
+
+
+        tab = ax_it.table(colLabels=diffs_df.index, 
+                          cellText=[diffs_df[x].round(2).values for x in diffs_df],
+                          rowLabels=diffs_df.columns)
+
+        tab.set_fontsize(12)
+        tab.scale(1,2)
+        # tab.auto_set_font_size
+
+        fig.subplots_adjust(hspace=0.05, wspace=0.3)
+
+    if outfile: fig.savefig(outfile)
+
+    if return_fig: return fig
+
+##_________________________________________________________________________##
+

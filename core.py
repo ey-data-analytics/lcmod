@@ -296,6 +296,7 @@ def r_trend(df, n_pers, *, shed=None, uptake_dur=None, plat_dur=None, gen_mult=N
         if _debug: print('using passed shed:')
         uptake_dur = shed.uptake_dur
         plat_dur = shed.plat_dur
+        plat_gr = shed.plat_gr
         gen_mult = shed.gen_mult
 
     # define the lifecycle period in which loe will occur, according to input shed or shape data
@@ -379,14 +380,10 @@ def r_fut_tr(df, n_pers, cut_off, shed=None, loe_delay=None,
     # the plat_dur from an external loe date.
     
     if loe_delay is not None:
-        if _debug: print('remaking shed to add loe delay\n')
-        shed = Shed(shed.shed_name + '_1', 
-                       shed.uptake_dur,
-                       shed.plat_dur + loe_delay,
-                       shed.gen_mult)
+        shed.plat_dur += loe_delay
         if _debug: 
-            print("shed now")
-            print(shed)
+            print("remaking shed to add loe delay\n")
+            print(shed, "\n")
    
 
     # will be working with the sum of the input df
@@ -408,7 +405,7 @@ def r_fut_tr(df, n_pers, cut_off, shed=None, loe_delay=None,
         print('last_date:'.ljust(pad), last_date)
         print('overlapping periods:'.ljust(pad), overlap)
         print('shape length'.ljust(pad), len(shape))
-        print('shed'.ljust(pad), shed)
+        if loe_delay is None: print('shed'.ljust(pad), shed)
 
     fut = get_forecast(shape, term_gr=term_gr, coh_gr=coh_gr, n_pers=n_pers+overlap, name=name)
 
@@ -487,7 +484,7 @@ def make_shape(spendline=None, shed=None, z_pad=0, peak_spend=1, annualised=Fals
     # use the final values to build components of the shape
     zeros = np.zeros(z_pad)
     uptake = np.arange(1, shed.uptake_dur+1)
-    plat = np.ones(shed.plat_dur) * shed.uptake_dur
+    plat = shed.uptake_dur * ((1+shed.plat_gr) ** np.arange(shed.plat_dur))
     term = shed.gen_mult * (shed.uptake_dur * (1+term_gr) ** np.arange(1, term_pad+1))
 
     # now put components together

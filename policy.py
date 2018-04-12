@@ -260,7 +260,7 @@ def make_params_table(pol_dict, index=None, log=False, _debug=False):
 
     if index is None:
         index = """peak_spend_pa peak_spend icer sav_rate 
-                    uptake_dur plat_dur gen_mult launch_delay launch_stop
+                    uptake_dur plat_dur plat_gr_pa plat_gr_pm gen_mult launch_delay launch_stop
                     term_gr_pa term_gr_pm coh_gr_pa coh_gr_pm""".split()
 
     df = pd.DataFrame(index=index)
@@ -275,6 +275,8 @@ def make_params_table(pol_dict, index=None, log=False, _debug=False):
 
                  int(flat_dict[q].shed.uptake_dur),
                  int(flat_dict[q].shed.plat_dur),
+                 flat_dict[q].shed.plat_gr*12,
+                 flat_dict[q].shed.plat_gr,
                  flat_dict[q].shed.gen_mult,
                  flat_dict[q].launch_delay,
                  flat_dict[q].launch_stop,

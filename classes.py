@@ -230,18 +230,29 @@ class Shed():
     .uptake_dur : the number of periods of linear growth following launch
     .plat_dur   : the number of periods of constant spend following uptake
     .gen_mult   : the change on patent expiry (multiplier)
+    .plat_gr    : the growth rate during plateau phase
+
+    [currently use this order because plat_gr was added separately, and most existing uses
+    instantiate with positional arguments only.  Leaving plat_gr as the last argument means
+    these uses still work - with a default value of 0% inserted below]
     '''
-    def __init__(self, name="", uptake_dur=None, plat_dur=None, gen_mult=None, plat_gr=None):
+    def __init__(self, name="a shed", uptake_dur=None, plat_dur=None, gen_mult=None, plat_gr=None):
+
+        if not isinstance(name, str):
+            print("Remember the first parameter is the shed's name (i.e. a string)")
+            return
+        else:
+            self.shed_name = name
 
         self.uptake_dur = uptake_dur
         self.plat_dur = plat_dur
 
+        # to avoid breaking changes with this new attribute, insert a default
         if plat_gr is None:
             self.plat_gr = 0
         else: self.plat_gr = plat_gr
 
         self.gen_mult = gen_mult
-        self.shed_name = name
 
 
     def __repr__(self):
@@ -250,7 +261,7 @@ class Shed():
              "uptake_dur": self.uptake_dur,
              "plat_dur": self.plat_dur,
              "gen_mult": self.gen_mult,
-             "plat_gr": self.plat_gr}
+             "plat_gr (pm)": "{:0,.2f}%".format(self.plat_gr*100)}
         for key in self._info:
             temp_string = key.ljust(27) + str(self._info[key]).rjust(10)
             outlist.append(temp_string)
@@ -273,6 +284,7 @@ class SpendLine():
      .uptake_dur     : duration of (linear) uptake period
      .plat_dur       : duration of (flat) plateau
      .gen_mult       : impact of patent expiry (multiplier, eg 0.2)
+     .plat_gr        : the growth rate during plateau phase
     
     term_gr         : the rate of growth to be applied (indefinitely) 
                     :  after the drop on patent expiry
@@ -331,6 +343,7 @@ class SpendLine():
             "  - shed name:".ljust(pad1) + self.shed.shed_name.rjust(pad2),
             "  - uptake_dur:".ljust(pad1) + str(self.shed.uptake_dur).rjust(pad2),
             "  - plat_dur:".ljust(pad1) + str(self.shed.plat_dur).rjust(pad2),
+            "  - plat_gr (pm):".ljust(pad1) + "{:0,.2f}%".format(self.shed.plat_gr*100).rjust(pad2),
             "  - gen_mult:".ljust(pad1) + str(self.shed.gen_mult).rjust(pad2),
             "loe_delay:".ljust(pad1) + str(self.loe_delay).rjust(pad2),
             "term_gr:".ljust(pad1) + str(self.term_gr).rjust(pad2),
