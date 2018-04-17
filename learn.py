@@ -25,7 +25,7 @@ class Path:
                       { parameter1 : (init_value, incr_method, incr),
                       { parameter2 : (init_value, incr_method, incr)..}
 
-                      where the value is a tuple of:
+                      where the value is a tuple or list of:
 
                         init_value  - the initial value of the variable
                                       (will overwrite value in panel)
@@ -84,14 +84,15 @@ class Path:
         # flag for whether to keep patent length constant
         self.const_pat = const_pat
 
-        # set up the history dataframe - first making a dict from inputs
+        # set up the HISTORY dataframe - first making a dict from inputs
         data = OrderedDict(uptake_dur = panel['shed'].uptake_dur,
                            plat_dur   = panel['shed'].plat_dur,
                            plat_gr    = panel['shed'].plat_gr,
                            gen_mult   = panel['shed'].gen_mult,
                            term_gr    = panel['term_gr'],
                            coh_gr     = panel['coh_gr'],
-                           diff       = 0)
+                           diff       = 0,
+                           action     = True)
 
         # - overwrite the inputs if different initial values provided
         for k in params_in: data[k]   = params_in[k][0]
@@ -101,9 +102,8 @@ class Path:
 
         # - write in the diff result
         diff = get_diff(self.hist.iloc[-1], obs=self.obs)
-        self.hist.iloc[-1,-1] = diff
+        self.hist.loc[0, 'diff'] = diff
         if _debug: print("\nInitial History\n", str(self.hist))
-
 
     # method for extending the search path
     def extend(self, _debug=False):
@@ -154,6 +154,7 @@ class Path:
                 
             # now check what's happened - is the new diff better?
             if res['diff'] < last_row['diff']:
+                res['action'] = True
                 self.hist.loc[row+1] = res
                 if _debug: print("--> Improvement - adding to history")
 
@@ -168,18 +169,27 @@ class Path:
                     print("--> No improvement possible for {}, in row".format(p), )
 
                 self.hist.loc[row+1] = last_row
+                self.hist.loc[row+1, 'action'] = False
                 self.params[p]['active'] = False
 
         return True
 
 
-    def is_active(self):
-        for p in self.params:
-            if self.params[p]['active']: return True
-        return False
+    def is_active(self, _debug=False):
+        check_window = 2 * len(self.params)
+        if _debug:
+            print("checking last {}".format(check_window))
+            print(self.hist['action'][-check_window:])
+        return self.hist['action'][-check_window:].any()
+
 
     def get_params(self):
         return self.params
+
+
+    def __repr__(self):
+        return str(tuple(self.params[p]['init_val'] for p in self.params))
+
 
     def __str__(self):
         rpad = 30
@@ -191,6 +201,7 @@ class Path:
                 out_list.append(" - " + q.ljust(rpad) + str(self.params[p][q]))
 
         return "\n".join(out_list)
+
 
     def get_forecast(self, comparison=False):
         '''Return a projection for the most recent parameter set, 
